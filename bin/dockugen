@@ -1,0 +1,195 @@
+#!/usr/bin/env node
+
+const { Command } = require('commander');
+const chalk = require('chalk');
+const path = require('path');
+const { dockugen } = require('../src/main');
+
+const program = new Command();
+
+// Set up program
+program
+  .name('dockugen')
+  .description('🚀 Universal API Documentation Generator for Node.js')
+  .version('1.0.0');
+
+// Main generate command
+program
+  .command('generate')
+  .alias('gen')
+  .description('Generate API documentation')
+  .option('-p, --path <path>', 'Project path (default: current directory)', process.cwd())
+  .option('-f, --framework <framework>', 'Framework to use (auto, nestjs, express, fastify, koa)', 'auto')
+  .option('-o, --output <format>', 'Output format (all, swagger, markdown, openapi, json)', 'all')
+  .option('-d, --out <directory>', 'Output directory', './api-docs')
+  .option('-w, --watch', 'Watch mode for file changes')
+  .option('--debug', 'Enable debug mode')
+  .option('--title <title>', 'API documentation title', 'API Documentation')
+  .option('--description <desc>', 'API documentation description', 'Auto-generated API documentation')
+  .option('--version <version>', 'API version', '1.0.0')
+  .action(async (options) => {
+    try {
+      console.log(chalk.blue('🚀 DockuGen - Generating API Documentation...\n'));
+      
+      const result = dockugen.generate({
+        projectPath: options.path,
+        framework: options.framework,
+        format: options.output,
+        out: options.out,
+        watch: options.watch,
+        debug: options.debug,
+        title: options.title,
+        description: options.description,
+        version: options.version
+      });
+
+      if (result.success) {
+        console.log(chalk.green('\n✅ Documentation generated successfully!'));
+        console.log(chalk.cyan('\n📊 Summary:'));
+        console.log(`   Framework: ${result.summary.framework}`);
+        console.log(`   Scanner: ${result.summary.scanner}`);
+        console.log(`   Routes Found: ${result.summary.routesFound}`);
+        console.log(`   DTOs Found: ${result.summary.dtosFound}`);
+        console.log(`   Files Generated: ${result.summary.filesGenerated}`);
+        console.log(`   Output Directory: ${options.out}`);
+        
+        if (Object.keys(result.output).length > 0) {
+          console.log(chalk.cyan('\n📁 Generated Files:'));
+          Object.entries(result.output).forEach(([format, filePath]) => {
+            console.log(`   ${format.toUpperCase()}: ${filePath}`);
+          });
+        }
+      } else {
+        console.error(chalk.red('\n❌ Failed to generate documentation:'), result.error);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('\n❌ Unexpected error:'), error.message);
+      if (options.debug) {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
+  });
+
+// Quick scan command
+program
+  .command('quick')
+  .description('Quick scan with default settings (Swagger only)')
+  .option('-p, --path <path>', 'Project path (default: current directory)', process.cwd())
+  .action(async (options) => {
+    try {
+      console.log(chalk.blue('🚀 DockuGen - Quick Scan...\n'));
+      
+      const result = dockugen.quickScan(options.path);
+      
+      if (result.success) {
+        console.log(chalk.green('\n✅ Quick scan completed!'));
+        console.log(chalk.cyan('\n📊 Summary:'));
+        console.log(`   Framework: ${result.summary.framework}`);
+        console.log(`   Routes Found: ${result.summary.routesFound}`);
+        console.log(`   Output: ./api-docs/swagger.json`);
+      } else {
+        console.error(chalk.red('\n❌ Quick scan failed:'), result.error);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('\n❌ Unexpected error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// Full scan command
+program
+  .command('full')
+  .description('Full scan with all output formats')
+  .option('-p, --path <path>', 'Project path (default: current directory)', process.cwd())
+  .action(async (options) => {
+    try {
+      console.log(chalk.blue('🚀 DockuGen - Full Scan...\n'));
+      
+      const result = dockugen.fullScan(options.path);
+      
+      if (result.success) {
+        console.log(chalk.green('\n✅ Full scan completed!'));
+        console.log(chalk.cyan('\n📊 Summary:'));
+        console.log(`   Framework: ${result.summary.framework}`);
+        console.log(`   Routes Found: ${result.summary.routesFound}`);
+        console.log(`   DTOs Found: ${result.summary.dtosFound}`);
+        console.log(`   Files Generated: ${result.summary.filesGenerated}`);
+        console.log(`   Output Directory: ./api-docs`);
+      } else {
+        console.error(chalk.red('\n❌ Full scan failed:'), result.error);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('\n❌ Unexpected error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// List scanners command
+program
+  .command('scanners')
+  .description('List available scanners')
+  .action(() => {
+    console.log(chalk.blue('🔍 Available Scanners:\n'));
+    const scanners = dockugen.listScanners();
+    scanners.forEach(scanner => {
+      const info = dockugen.getScannerInfo(scanner);
+      if (info) {
+        console.log(chalk.cyan(`   ${scanner}:`));
+        console.log(`      Description: ${info.description}`);
+        if (info.capabilities && info.capabilities.length > 0) {
+          console.log(`      Capabilities: ${info.capabilities.join(', ')}`);
+        }
+        console.log('');
+      } else {
+        console.log(chalk.cyan(`   ${scanner}`));
+      }
+    });
+  });
+
+// List formats command
+program
+  .command('formats')
+  .description('List available output formats')
+  .action(() => {
+    console.log(chalk.blue('📄 Available Output Formats:\n'));
+    const formats = dockugen.listFormats();
+    formats.forEach(format => {
+      console.log(chalk.cyan(`   ${format}`));
+    });
+  });
+
+// Detect framework command
+program
+  .command('detect')
+  .description('Detect framework for a project')
+  .option('-p, --path <path>', 'Project path (default: current directory)', process.cwd())
+  .action((options) => {
+    try {
+      console.log(chalk.blue('🔍 Detecting Framework...\n'));
+      
+      const framework = dockugen.detectFramework(options.path);
+      console.log(chalk.green(`✅ Detected Framework: ${framework}`));
+      console.log(chalk.cyan(`   Project Path: ${options.path}`));
+    } catch (error) {
+      console.error(chalk.red('\n❌ Failed to detect framework:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// Default command (when no subcommand is provided)
+program
+  .action(() => {
+    console.log(chalk.blue('🚀 DockuGen - Universal API Documentation Generator\n'));
+    console.log('Use --help to see available commands and options.\n');
+    console.log('Quick start:');
+    console.log('  dockugen quick                    # Quick scan with defaults');
+    console.log('  dockugen generate                 # Full generation with options');
+    console.log('  dockugen --help                   # Show help');
+  });
+
+// Parse arguments
+program.parse(process.argv);

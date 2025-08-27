@@ -1,0 +1,58 @@
+{
+  "name": "dockugen",
+  "version": "1.0.0",
+  "description": "Auto-generate API documentation for Node.js apps - Zero config, multi-framework support",
+  "main": "src/main.js",
+  "bin": {
+    "dockugen": "./bin/dockugen"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"DockuGen is ready to use!\"",
+    "dev": "node src/main.js --help",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "api",
+    "documentation",
+    "swagger",
+    "openapi",
+    "nodejs",
+    "express",
+    "fastify",
+    "koa",
+    "auto-docs",
+    "nestjs",
+    "swaggo",
+    "api-docs",
+    "cli",
+    "dockugen",
+    "documentation-generator"
+  ],
+  "author": "DockuGen Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ilham-fauzi/dockugen.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ilham-fauzi/dockugen/issues"
+  },
+  "homepage": "https://github.com/ilham-fauzi/dockugen#readme",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^9.4.1",
+    "express": "^5.1.0",
+    "glob": "^7.2.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ]
+}
