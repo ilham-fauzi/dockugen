@@ -1,0 +1,150 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dockugen-docs-generator
+  namespace: dockugen
+  labels:
+    app: dockugen
+    purpose: scheduled-docs-generation
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: dockugen
+            purpose: scheduled-docs-generation
+        spec:
+          serviceAccountName: dockugen-sa
+          restartPolicy: OnFailure
+          containers:
+          - name: dockugen-runner
+            image: dockugen:1.0.0
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/sh"]
+            args:
+            - -c
+            - |
+              echo "Starting scheduled documentation generation at $(date)"
+              echo "Scanning project directory: /workspace/project"
+              
+              # Generate documentation
+              node /app/bin/dockugen generate \
+                --path /workspace/project \
+                --out /app/output \
+                --format all \
+                --title "Auto-generated API Documentation" \
+                --description "Generated on $(date)" \
+                --version "1.0.0"
+              
+              # Check if generation was successful
+              if [ $? -eq 0 ]; then
+                echo "✅ Documentation generation completed successfully"
+                echo "📁 Files generated:"
+                ls -la /app/output/
+                
+                # Optional: Send notification
+                echo "📧 Documentation updated successfully"
+              else
+                echo "❌ Documentation generation failed"
+                exit 1
+              fi
+            env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DOCKUGEN_VERSION
+              value: "1.0.0"
+            - name: LOG_LEVEL
+              value: "info"
+            volumeMounts:
+            - name: project-volume
+              mountPath: /workspace/project:ro
+            - name: output-volume
+              mountPath: /app/output
+            - name: cache-volume
+              mountPath: /app/cache
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "500m"
+              limits:
+                memory: "1Gi"
+                cpu: "1000m"
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              runAsUser: 1001
+              capabilities:
+                drop:
+                - ALL
+          volumes:
+          - name: project-volume
+            persistentVolumeClaim:
+              claimName: dockugen-project-pvc
+          - name: output-volume
+            persistentVolumeClaim:
+              claimName: dockugen-output-pvc
+          - name: cache-volume
+            persistentVolumeClaim:
+              claimName: dockugen-cache-pvc
+---
+# Manual job trigger
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dockugen-manual-trigger
+  namespace: dockugen
+  labels:
+    app: dockugen
+    purpose: manual-docs-generation
+spec:
+  template:
+    metadata:
+      labels:
+        app: dockugen
+        purpose: manual-docs-generation
+    spec:
+      serviceAccountName: dockugen-sa
+      restartPolicy: Never
+      containers:
+      - name: dockugen-runner
+        image: dockugen:1.0.0
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "Manual documentation generation triggered at $(date)"
+          node /app/bin/dockugen generate \
+            --path /workspace/project \
+            --out /app/output \
+            --format all \
+            --debug
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DEBUG
+          value: "true"
+        volumeMounts:
+        - name: project-volume
+          mountPath: /workspace/project:ro
+        - name: output-volume
+          mountPath: /app/output
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: project-volume
+        persistentVolumeClaim:
+          claimName: dockugen-project-pvc
+      - name: output-volume
+        persistentVolumeClaim:
+          claimName: dockugen-output-pvc

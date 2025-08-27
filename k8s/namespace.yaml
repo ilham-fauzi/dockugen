@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dockugen
+  labels:
+    name: dockugen
+    app: dockugen
+    purpose: api-documentation
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dockugen-quota
+  namespace: dockugen
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "4"
+    limits.memory: 4Gi
+    persistentvolumeclaims: "5"

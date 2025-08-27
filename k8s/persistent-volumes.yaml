@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dockugen-output-pvc
+  namespace: dockugen
+  labels:
+    app: dockugen
+    purpose: output-storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: "standard"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dockugen-project-pvc
+  namespace: dockugen
+  labels:
+    app: dockugen
+    purpose: project-storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: "standard"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dockugen-cache-pvc
+  namespace: dockugen
+  labels:
+    app: dockugen
+    purpose: cache-storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: "standard"

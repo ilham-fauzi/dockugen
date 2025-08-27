@@ -1,0 +1,23 @@
+apiVersion: v2
+name: dockugen
+description: Universal API Documentation Generator for Node.js
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - api
+  - documentation
+  - swagger
+  - openapi
+  - nodejs
+  - automation
+home: https://github.com/ilham-fauzi/dockugen
+sources:
+  - https://github.com/ilham-fauzi/dockugen
+maintainers:
+  - name: DockuGen Team
+    email: team@dockugen.dev
+icon: https://raw.githubusercontent.com/ilham-fauzi/dockugen/main/assets/icon.png
+annotations:
+  category: Documentation
+  licenses: MIT

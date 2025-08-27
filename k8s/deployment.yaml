@@ -1,0 +1,186 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dockugen
+  namespace: dockugen
+  labels:
+    app: dockugen
+    version: v1.0.0
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: dockugen
+  template:
+    metadata:
+      labels:
+        app: dockugen
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: dockugen-sa
+      containers:
+      - name: dockugen
+        image: dockugen:1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 8080
+          name: metrics
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: dockugen-config
+              key: NODE_ENV
+        - name: DOCKUGEN_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: dockugen-config
+              key: DOCKUGEN_VERSION
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: dockugen-config
+              key: LOG_LEVEL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: output-volume
+          mountPath: /app/output
+        - name: config-volume
+          mountPath: /app/config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+          name: http-nginx
+        volumeMounts:
+        - name: output-volume
+          mountPath: /usr/share/nginx/html:ro
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf:ro
+          subPath: nginx.conf
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: output-volume
+        emptyDir: {}
+      - name: config-volume
+        configMap:
+          name: dockugen-config
+      - name: nginx-config
+        configMap:
+          name: dockugen-config
+          items:
+          - key: nginx.conf
+            path: nginx.conf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dockugen-cronjob
+  namespace: dockugen
+  labels:
+    app: dockugen-cronjob
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dockugen-cronjob
+  template:
+    metadata:
+      labels:
+        app: dockugen-cronjob
+    spec:
+      serviceAccountName: dockugen-sa
+      restartPolicy: OnFailure
+      containers:
+      - name: dockugen-runner
+        image: dockugen:1.0.0
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "Starting scheduled documentation generation..."
+          node /app/bin/dockugen generate \
+            --path /workspace/project \
+            --out /app/output \
+            --format all
+          echo "Documentation generation completed"
+        env:
+        - name: NODE_ENV
+          value: "production"
+        volumeMounts:
+        - name: project-volume
+          mountPath: /workspace/project:ro
+        - name: output-volume
+          mountPath: /app/output
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: project-volume
+        persistentVolumeClaim:
+          claimName: dockugen-project-pvc
+      - name: output-volume
+        persistentVolumeClaim:
+          claimName: dockugen-output-pvc

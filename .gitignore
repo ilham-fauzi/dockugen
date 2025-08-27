@@ -109,3 +109,43 @@ test-pickup-correct/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Docker
+.dockerignore
+Dockerfile.prod
+docker-compose.override.yml
+.docker/
+
+# Kubernetes
+k8s/secrets/
+k8s/*.secret.yaml
+*.kubeconfig
+.kube/
+
+# Helm
+helm/charts/
+helm/*.tgz
+.helm/
+
+# CI/CD
+.gitlab-ci.yml.local
+.github/workflows/local.yml
+.circleci/local.yml
+
+# Environment specific
+.env.local
+.env.staging
+.env.production
+.env.kubernetes
+.env.docker
+
+# Output directories
+output/
+docs/
+api-docs/
+generated/
+
+# Cache directories
+.cache/
+.temp/
+.tmp/
